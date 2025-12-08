@@ -1,3 +1,5 @@
+import psycopg2
+
 # main.py
 # menu will be here with functions for each option
 # will likely need multiple menus for different user types
@@ -9,6 +11,30 @@
 # payment/address management
 # agent property management
 # booking management
+
+def connect():
+    """ Connect to the PostgreSQL database server """
+    conn = None
+    try:
+        print('Connecting to the PostgreSQL database...')
+        conn = psycopg2.connect(host="localhost", 
+                                database="My Database",
+                                user="My Database", 
+                                password="1234",
+                                port=5432
+                                )
+        cur = conn.cursor()
+        print('PostgreSQL database version:')
+        cur.execute('SELECT version()')
+        db_version = cur.fetchone()
+        print(db_version)
+        cur.close()
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(error)
+    finally:
+        if conn is not None:
+            conn.close()
+            print('Database connection closed.')
 
 def register_account():
     print("Functionality not implemented yet.\n")
@@ -41,6 +67,7 @@ def main_menu():
     # first user login, then we continue to user menu depending on user type
     
     while True:
+        connect()
         print("===== Real Estate Booking System =====")
         print("1. Register Account")
         print("2. Manage Payment Information")
