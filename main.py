@@ -26,6 +26,7 @@ def get_connection():
                                 user="My Database", 
                                 password="1234",
                                 port=5432)
+
         cur = conn.cursor()
         return conn, cur
     except (Exception, psycopg2.DatabaseError) as error:
