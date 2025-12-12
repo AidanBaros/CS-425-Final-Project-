@@ -1,6 +1,9 @@
 import psycopg2
 import uuid
 from datetime import datetime
+import dotenv
+import os   
+import re
 
 # main.py
 # menu will be here with functions for each option
@@ -15,18 +18,27 @@ from datetime import datetime
 # booking management
 # Global session state
 current_user = None  # Dictionary with: {'user_id': str, 'name': str, 'email': str, 'type': str, 'renter_id': str or None, 'agent_id': str or None}
+date_pattern = r"^\d{4}-\d{2}-\d{2}$"
+dotenv.load_dotenv()
 
+DB_CONFIG = {
+    "dbname": os.getenv("dbname"),
+    "user": os.getenv("user"),
+    "password": os.getenv("password"),
+    "host": os.getenv("host"),
+    "port": os.getenv("port")
+}
 
 def get_connection():
     """ Connect to the PostgreSQL database server """
     try:
         print('Connecting to the PostgreSQL database...')
-        conn = psycopg2.connect(host="localhost", 
-                                database="My Database",
-                                user="My Database", 
-                                password="1234",
-                                port=5432)
-
+        conn = psycopg2.connect(host=DB_CONFIG["host"], 
+                                database=DB_CONFIG["dbname"],
+                                user=DB_CONFIG["user"], 
+                                password=DB_CONFIG["password"],
+                                port=DB_CONFIG["port"])
+        
         cur = conn.cursor()
         return conn, cur
     except (Exception, psycopg2.DatabaseError) as error:
@@ -149,6 +161,8 @@ def register_account():
                 print("Move-in date cannot be empty.\n")
                 conn.rollback()
                 return
+            elif re.match(date_pattern, move_in_date):
+                print("Not a valid date format. Use YYYY-MM-DD.\n")
             
             preferred_locations = input("Enter preferred locations (optional): ").strip()
             if not preferred_locations:
@@ -201,13 +215,370 @@ def manage_payment_info():
 
     print("Functionality not implemented yet.\n")
 
+
 def manage_addresses():
 
     print("Functionality not implemented yet.\n")
 
 def manage_properties():
+    """Agent: Add / Delete / Modify properties."""
+    global current_user
 
-    print("Functionality not implemented yet.\n")
+    if current_user is None or current_user.get("type") != "Agent":
+        print("You must be logged in as an Agent to manage properties.\n")
+        return
+
+    while True:
+        print("\n===== Manage Properties (Agent) =====")
+        print("1. List All Properties")
+        print("2. Add New Property")
+        print("3. Modify Existing Property")
+        print("4. Delete Property")
+        print("0. Back to Agent Menu")
+
+        choice = input("Select an option: ").strip()
+
+        if choice == "1":
+            list_all_properties()
+        elif choice == "2":
+            add_property()
+        elif choice == "3":
+            modify_property()
+        elif choice == "4":
+            delete_property()
+        elif choice == "0":
+            break
+        else:
+            print("Invalid option.\n")
+
+
+def list_all_properties():
+    """List all properties with basic info."""
+    conn, cur = get_connection()
+    if conn is None:
+        return
+
+    try:
+        cur.execute("""
+            SELECT p.propertyid, p.type, p.description, p.price, p.availability, p.crimerate,
+                   l.address, l.city, l.state, l.zipcode, l.country
+            FROM property p
+            JOIN locations l ON p.locationid = l.locationid
+            ORDER BY l.city, l.state, p.price;
+        """)
+        rows = cur.fetchall()
+
+        if not rows:
+            print("\nThere are no properties in the system.\n")
+            return
+
+        print("\n===== All Properties =====")
+        for row in rows:
+            (pid, ptype, desc, price, avail, crime,
+             addr, city, state, zipcode, country) = row
+            print(f"Property ID: {pid}")
+            print(f"  Type: {ptype}")
+            print(f"  Address: {addr}, {city}, {state} {zipcode}, {country}")
+            print(f"  Price: ${price:.2f}")
+            print(f"  Availability: {avail}")
+            print(f"  Crime Rate: {crime}")
+            print("-" * 40)
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error listing properties: {error}\n")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def add_property():
+    """Add a new property and its specific subtype row."""
+    conn, cur = get_connection()
+    if conn is None:
+        return
+
+    try:
+        print("\n===== Add New Property =====")
+        # Address / location info
+        address = input("Street address: ").strip()
+        city = input("City: ").strip()
+        state = input("State: ").strip()
+        zipcode = input("Zip code: ").strip()
+        country = input("Country: ").strip()
+
+        if not (address and city and state and zipcode and country):
+            print("All address fields are required.\n")
+            return
+
+        # Property core info
+        print("\nProperty type options:")
+        print("1. House")
+        print("2. Apartment")
+        print("3. CommercialBuilding")
+        print("4. Land")
+        print("5. VacationHome")
+        type_choice = input("Select property type (1-5): ").strip()
+
+        type_map = {
+            "1": "House",
+            "2": "Apartment",
+            "3": "CommercialBuilding",
+            "4": "Land",
+            "5": "VacationHome"
+        }
+        if type_choice not in type_map:
+            print("Invalid property type choice.\n")
+            return
+        ptype = type_map[type_choice]
+
+        description = input("Description: ").strip()
+        if not description:
+            print("Description cannot be empty.\n")
+            return
+
+        price_str = input("Price (e.g., 1200.00): ").strip()
+        try:
+            price = float(price_str)
+        except ValueError:
+            print("Invalid price.\n")
+            return
+
+        availability = input("Availability (e.g., 'Available', 'Not Available', 'For Rent'): ").strip()
+        if not availability:
+            print("Availability cannot be empty.\n")
+            return
+
+        crime_rate = input("Crime rate description (optional): ").strip()
+        if not crime_rate:
+            crime_rate = None
+
+        # Insert location
+        location_id = str(uuid.uuid4())
+        cur.execute("""
+            INSERT INTO locations (locationid, address, city, state, zipcode, country)
+            VALUES (%s, %s, %s, %s, %s, %s);
+        """, (location_id, address, city, state, zipcode, country))
+
+        # Insert property
+        property_id = str(uuid.uuid4())
+        cur.execute("""
+            INSERT INTO property (propertyid, type, locationid, description, price, availability, crimerate)
+            VALUES (%s, %s, %s, %s, %s, %s, %s);
+        """, (property_id, ptype, location_id, description, price, availability, crime_rate))
+
+        # Insert into subtype table based on type
+        if ptype == "House":
+            num_rooms_str = input("Number of rooms: ").strip()
+            sqft_str = input("Square feet: ").strip()
+            try:
+                num_rooms = int(num_rooms_str)
+                sqft = int(sqft_str)
+            except ValueError:
+                print("Invalid rooms or square feet.\n")
+                conn.rollback()
+                return
+            house_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO house (houseid, propertyid, numrooms, squarefeet)
+                VALUES (%s, %s, %s, %s);
+            """, (house_id, property_id, num_rooms, sqft))
+
+        elif ptype == "Apartment":
+            building_type = input("Building type (e.g., 'HighRise'): ").strip()
+            floor_str = input("Floor: ").strip()
+            num_rooms_str = input("Number of rooms: ").strip()
+            try:
+                floor = int(floor_str)
+                num_rooms = int(num_rooms_str)
+            except ValueError:
+                print("Invalid floor or number of rooms.\n")
+                conn.rollback()
+                return
+            apt_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO apartment (apartmentid, propertyid, buildingtype, floor, numrooms)
+                VALUES (%s, %s, %s, %s, %s);
+            """, (apt_id, property_id, building_type, floor, num_rooms))
+
+        elif ptype == "CommercialBuilding":
+            sqft_str = input("Square feet: ").strip()
+            business_type = input("Type of business allowed (e.g., 'Retail'): ").strip()
+            try:
+                sqft = int(sqft_str)
+            except ValueError:
+                print("Invalid square feet.\n")
+                conn.rollback()
+                return
+            cb_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO commercialbuilding (commercialbuildingid, propertyid, squarefeet, businesstype)
+                VALUES (%s, %s, %s, %s);
+            """, (cb_id, property_id, sqft, business_type))
+
+        elif ptype == "Land":
+            land_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO land (landid, propertyid)
+                VALUES (%s, %s);
+            """, (land_id, property_id))
+
+        elif ptype == "VacationHome":
+            vh_id = str(uuid.uuid4())
+            cur.execute("""
+                INSERT INTO vacationhome (vacationhomeid, propertyid)
+                VALUES (%s, %s);
+            """, (vh_id, property_id))
+
+        conn.commit()
+        print("\nProperty added successfully!\n")
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error adding property: {error}\n")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def modify_property():
+    """Modify basic property and location information."""
+    conn, cur = get_connection()
+    if conn is None:
+        return
+
+    try:
+        list_all_properties()
+        pid = input("\nEnter Property ID to modify (or blank to cancel): ").strip()
+        if not pid:
+            return
+
+        # Load existing data
+        cur.execute("""
+            SELECT p.propertyid, p.type, p.description, p.price, p.availability, p.crimerate,
+                   l.locationid, l.address, l.city, l.state, l.zipcode, l.country
+            FROM property p
+            JOIN locations l ON p.locationid = l.locationid
+            WHERE p.propertyid = %s;
+        """, (pid,))
+        row = cur.fetchone()
+
+        if not row:
+            print("No such property.\n")
+            return
+
+        (propertyid, ptype, desc, price, avail, crime,
+         locid, address, city, state, zipcode, country) = row
+
+        print("\nLeave any field blank to keep current value.")
+
+        new_desc = input(f"Description [{desc}]: ").strip() or desc
+
+        price_str = input(f"Price [{price}]: ").strip()
+        if price_str:
+            try:
+                new_price = float(price_str)
+            except ValueError:
+                print("Invalid price; keeping old value.")
+                new_price = price
+        else:
+            new_price = price
+
+        new_avail = input(f"Availability [{avail}]: ").strip() or avail
+        new_crime = input(f"Crime rate [{crime}]: ").strip() or crime
+
+        new_address = input(f"Address [{address}]: ").strip() or address
+        new_city = input(f"City [{city}]: ").strip() or city
+        new_state = input(f"State [{state}]: ").strip() or state
+        new_zip = input(f"Zip code [{zipcode}]: ").strip() or zipcode
+        new_country = input(f"Country [{country}]: ").strip() or country
+
+        # Update property
+        cur.execute("""
+            UPDATE property
+            SET description = %s, price = %s, availability = %s, crimerate = %s
+            WHERE propertyid = %s;
+        """, (new_desc, new_price, new_avail, new_crime, propertyid))
+
+        # Update location
+        cur.execute("""
+            UPDATE locations
+            SET address = %s, city = %s, state = %s, zipcode = %s, country = %s
+            WHERE locationid = %s;
+        """, (new_address, new_city, new_state, new_zip, new_country, locid))
+
+        conn.commit()
+        print("\nProperty updated successfully!\n")
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error modifying property: {error}\n")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
+
+def delete_property():
+    """Delete a property (if there are no bookings)."""
+    conn, cur = get_connection()
+    if conn is None:
+        return
+
+    try:
+        list_all_properties()
+        pid = input("\nEnter Property ID to delete (or blank to cancel): ").strip()
+        if not pid:
+            return
+
+        # Check for existing bookings
+        cur.execute("""
+            SELECT COUNT(*) FROM booking WHERE propertyid = %s;
+        """, (pid,))
+        count = cur.fetchone()[0]
+        if count > 0:
+            print("Cannot delete property with existing bookings.\n")
+            return
+
+        # Find type and location for cleanup
+        cur.execute("""
+            SELECT type, locationid
+            FROM property
+            WHERE propertyid = %s;
+        """, (pid,))
+        row = cur.fetchone()
+        if not row:
+            print("No such property.\n")
+            return
+
+        ptype, locid = row
+
+        # Delete subtype row first
+        if ptype == "House":
+            cur.execute("DELETE FROM house WHERE propertyid = %s;", (pid,))
+        elif ptype == "Apartment":
+            cur.execute("DELETE FROM apartment WHERE propertyid = %s;", (pid,))
+        elif ptype == "CommercialBuilding":
+            cur.execute("DELETE FROM commercialbuilding WHERE propertyid = %s;", (pid,))
+        elif ptype == "Land":
+            cur.execute("DELETE FROM land WHERE propertyid = %s;", (pid,))
+        elif ptype == "VacationHome":
+            cur.execute("DELETE FROM vacationhome WHERE propertyid = %s;", (pid,))
+
+        # Delete property
+        cur.execute("DELETE FROM property WHERE propertyid = %s;", (pid,))
+
+        # NOTE: We leave the location row in case other entities reference it (schools, cards, etc.)
+
+        conn.commit()
+        print("Property deleted successfully.\n")
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error deleting property: {error}\n")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
 
 def search_properties():
 
@@ -218,8 +589,116 @@ def book_property():
     print("Functionality not implemented yet.\n")
 
 def manage_bookings():
+    """View / cancel bookings.
 
+    - Renters: their own bookings.
+    - Agents: bookings for properties under their agency.
+    """
+    global current_user
+
+    if current_user is None:
+        print("You must be logged in to manage bookings.\n")
+        return
+
+    user_type = current_user.get("type")
+
+    if user_type == "Renter":
+        manage_renter_bookings()
+    elif user_type == "Agent":
+        manage_agent_bookings()
+    else:
+        print("Unknown user type.\n")
+
+
+def manage_renter_bookings():
+    
     print("Functionality not implemented yet.\n")
+
+
+def manage_agent_bookings():
+    """Agent: view and cancel bookings for properties under their agency."""
+    agent_id = current_user.get("agent_id")
+    if not agent_id:
+        print("Agent ID not found for current user.\n")
+        return
+
+    conn, cur = get_connection()
+    if conn is None:
+        return
+
+    try:
+        while True:
+            print("\n===== Bookings for My Agency =====")
+
+            cur.execute("""
+                SELECT b.bookingid,
+                       p.propertyid, p.type, p.description, p.price,
+                       l.address, l.city, l.state, l.zipcode,
+                       b.startdate, b.enddate,
+                       u.name AS renter_name, u.email AS renter_email,
+                       c.cardnumber
+                FROM booking b
+                JOIN property p ON b.propertyid = p.propertyid
+                JOIN locations l ON p.locationid = l.locationid
+                JOIN renter r ON b.renterid = r.renterid
+                JOIN users u ON r.userid = u.userid
+                JOIN card c ON b.cardid = c.cardid
+                WHERE b.agentid = %s
+                ORDER BY b.startdate DESC;
+            """, (agent_id,))
+            rows = cur.fetchall()
+
+            if not rows:
+                print("There are no bookings associated with your agency.\n")
+            else:
+                for row in rows:
+                    (bookingid, pid, ptype, desc, price,
+                     addr, city, state, zipcode,
+                     startdate, enddate,
+                     renter_name, renter_email,
+                     cardnumber) = row
+                    masked_card = "**** **** **** " + cardnumber[-4:]
+                    print(f"Booking ID: {bookingid}")
+                    print(f"  Property: {ptype} ({pid})")
+                    print(f"  Address: {addr}, {city}, {state} {zipcode}")
+                    print(f"  Description: {desc}")
+                    print(f"  Price (per period unit): ${price:.2f}")
+                    print(f"  Rental Period: {startdate} to {enddate}")
+                    print(f"  Renter: {renter_name} <{renter_email}>")
+                    print(f"  Payment Method: {masked_card}")
+                    print("-" * 40)
+
+            print("1. Cancel a booking")
+            print("0. Back")
+            choice = input("Select an option: ").strip()
+
+            if choice == "1":
+                bid = input("Enter Booking ID to cancel (or blank to cancel): ").strip()
+                if not bid:
+                    continue
+
+                # Ensure booking belongs to this agent (via booking.agentid)
+                cur.execute("""
+                    DELETE FROM booking
+                    WHERE bookingid = %s AND agentid = %s;
+                """, (bid, agent_id))
+                if cur.rowcount == 0:
+                    print("No such booking found for your agency.\n")
+                else:
+                    conn.commit()
+                    print("Booking cancelled.\n")
+            elif choice == "0":
+                break
+            else:
+                print("Invalid option.\n")
+
+    except (Exception, psycopg2.DatabaseError) as error:
+        print(f"Error managing agent bookings: {error}\n")
+        conn.rollback()
+    finally:
+        cur.close()
+        conn.close()
+
 
 def renter_menu():
     """ Menu for logged-in renters """
