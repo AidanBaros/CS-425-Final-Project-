@@ -10,11 +10,11 @@ VALUES
 INSERT INTO locations (LocationID, Address, City, State, ZipCode, Country)
 VALUES 
 -- User & Agent addresses
-('l001','3303 S State St','Chicago','IL','60616','United States'),       -- Tim
-('l002','3304 N State St','Chicago','IL','60616','United States'),       -- Aidan
-('l003','12678 Honeygrove Ct','St. Louis','MO','63146','United States'), -- Yousef
-('l004','12768 Honeygrove Ct','St. Louis','MO','63146','United States'), -- Emily
-('l005','2301 S State St','Chicago','IL','60616','United States'),       -- Extra address for Emily
+('l001','3303 S State St','Chicago','IL','60616','United States'),        -- Tim
+('l002','3304 N State St','Chicago','IL','60616','United States'),        -- Aidan
+('l003','12678 Honeygrove Ct','St. Louis','MO','63146','United States'),  -- Yousef
+('l004','12768 Honeygrove Ct','St. Louis','MO','63146','United States'),  -- Emily
+('l005','2301 S State St','Chicago','IL','60616','United States'),        -- Extra address for Emily
 
 -- Property addresses
 ('l006','400 W Elm St','Chicago','IL','60610','United States'),
@@ -63,17 +63,17 @@ VALUES
 
 ------------------------------------- PROPERTY -----------------------------------------------
 
-INSERT INTO property (PropertyID, Type, LocationID, Description, Price, Availability, CrimeRate)
+INSERT INTO property (PropertyID, Type, LocationID, AgentID, ListingType, Description, Price, Availability, CrimeRate)
 VALUES
-('p001','House','l006','A fun place to live',400000.00,'Available','0.001'),
-('p002','House','l007','A fun place to live',500000.00,'Available','0.0056'),
-('p003','House','l008','A fun place to live',1000000.00,'Available','0.002'),
-('p004','Apartment','l009','A fun place to rent',5000.00,'Available','0.001'),
-('p005','Apartment','l010','A fun place to rent',750.00,'Unavailable','0.1'),
-('p006','Apartment','l004','A fun place to rent',1500.00,'Available','0.045'),
-('p007','Commercial Building','l011','A fun place to work',55000.00,'Available','0.0001'),
-('p008','Land','l012','A fun place to build',2000000.00,'Available','0.00001'),
-('p009','Vacation Home','l013','A fun place to relax',5000000.00,'Unavailable','0.000001');
+('p001','House','l006','ag001','Sale','A fun place to live',400000.00,'Active','0.001'),
+('p002','House','l007','ag002','Sale','A fun place to live',500000.00,'Active','0.0056'),
+('p003','House','l008','ag001','Sale','A fun place to live',1000000.00,'Active','0.002'),
+('p004','Apartment','l009','ag001','Rent','A fun place to rent',5000.00,'Active','0.001'),
+('p005','Apartment','l010','ag001','Rent','A fun place to rent',750.00,'Inactive','0.1'),
+('p006','Apartment','l004','ag002','Rent','A fun place to rent',1500.00,'Active','0.045'),
+('p007','CommercialBuilding','l011','ag002','Sale','A fun place to work',55000.00,'Active','0.0001'),
+('p008','Land','l012','ag001','Sale','A fun place to build',2000000.00,'Active','0.00001'),
+('p009','VacationHome','l013','ag002','Rent','A fun place to relax',5000000.00,'Inactive','0.000001');
 
 ------------------------------------- HOUSES -----------------------------------------------
 
@@ -85,48 +85,56 @@ VALUES
 
 ------------------------------------- APARTMENTS -----------------------------------------------
 
-INSERT INTO apartment (ApartmentID, PropertyID, BuildingType, Floor, NumRooms)
+INSERT INTO apartment (ApartmentID, PropertyID, BuildingType, Floor, NumRooms, SquareFeet)
 VALUES
-('ap001','p004','Studio',1,2),
-('ap002','p005','Condo',2,3),
-('ap003','p006','Penthouse',5,5);
+('ap001','p004','Studio',1,2,600),
+('ap002','p005','Condo',2,3,950),
+('ap003','p006','Penthouse',5,5,2200);
 
 ------------------------------------- COMMERCIAL BUILDINGS -----------------------------------------------
 
 INSERT INTO commercialBuilding (CommercialBuildingID, PropertyID, SquareFeet, BusinessType)
 VALUES
-('cb001','p007',35000,'Bank'),
-('cb002','p007',27000,'Law Firm'),
-('cb003','p007',30000,'Hardware Store');
+('cb001','p007',35000,'Bank');
 
 ------------------------------------- LAND -----------------------------------------------
 
 INSERT INTO land (LandID, PropertyID)
 VALUES
-('ld001','p008'),
-('ld002','p008'),
-('ld003','p008');
+('ld001','p008');
 
 ------------------------------------- VACATION HOMES -----------------------------------------------
 
 INSERT INTO vacationHome (VacationHomeID, PropertyID)
 VALUES
-('vh001','p009'),
-('vh002','p009'),
-('vh003','p009');
+('vh001','p009');
 
 ------------------------------------- SCHOOLS -----------------------------------------------
 
-INSERT INTO school (SchoolID, PropertyID, Name, AddressID)
+INSERT INTO school (SchoolID, Name, AddressID)
 VALUES
-('s001','p001','Parkway North','l014'),
-('s002','p002','Parkway South','l015'),
-('s003','p003','Parkway East','l016');
+('s001','Parkway North','l014'),
+('s002','Parkway South','l015'),
+('s003','Parkway East','l016');
+
+INSERT INTO property_x_school (PropertySchoolID, PropertyID, SchoolID, DistanceMiles)
+VALUES
+('ps001','p001','s001',1.20),
+('ps002','p002','s002',2.40),
+('ps003','p003','s003',3.10),
+('ps004','p004','s001',4.70);
+
+------------------------------------- REWARDS PROGRAM (BONUS) -----------------------------------------------
+
+INSERT INTO rewards_member (RenterID, Points, JoinedAt)
+VALUES
+('r001', 1200, NOW()),
+('r002', 300, NOW());
 
 ------------------------------------- BOOKINGS -----------------------------------------------
 
 INSERT INTO booking (BookingID, CardID, RenterID, AgentID, PropertyID, StartDate, EndDate)
 VALUES
 ('b001','c002','r002','ag001','p004','2026-03-12','2027-03-15'),
-('b002','c003','r002','ag001','p006','2026-06-12','2027-06-11'),
+('b002','c003','r002','ag002','p006','2026-06-12','2027-06-11'),
 ('b003','c001','r001','ag002','p002','2026-09-12','2027-09-10');
