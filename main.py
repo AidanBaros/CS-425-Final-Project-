@@ -1795,7 +1795,7 @@ def renter_menu():
         elif choice == "4":
             renter_book_property()
         elif choice == "5":
-            manage_bookings()
+            renter_manage_bookings()
         elif choice == "6":
             renter_rewards_menu()
         elif choice == "7":
@@ -1812,21 +1812,43 @@ def agent_menu():
     """Menu for logged-in agents."""
     while True:
         print("\n===== Agent Menu =====")
-        print("1. Add/Delete/Modify Properties")
-        print("2. Search Properties")
-        print("3. View/Cancel Bookings (My Properties)")
-        print("4. Logout")
+        print("1. Add Property")
+        print("2. Modify Property")
+        print("3. Delete Property")
+        print("4. View My Properties")
+        print("5. Search Properties")
+        print("6. View/Cancel Bookings (My Properties)")
+        print("7. Logout")
         print("0. Exit Program")
 
         choice = input("Select an option: ").strip()
 
         if choice == "1":
-            manage_properties()
+            agent_add_property()
         elif choice == "2":
-            search_properties()
+            agent_modify_property()
         elif choice == "3":
-            manage_bookings()
+            agent_delete_property()
         elif choice == "4":
+            agent_view_properties()
+        elif choice == "5":
+            search_properties()
+        elif choice == "6":
+            while True:
+                print("\n===== Agent Bookings =====")
+                print("1. View Bookings")
+                print("2. Cancel Booking")
+                print("0. Back")
+                sub = input("Select an option: ").strip()
+                if sub == "1":
+                    agent_view_bookings()
+                elif sub == "2":
+                    agent_cancel_booking()
+                elif sub == "0":
+                    break
+                else:
+                    print("Invalid option.\n")
+        elif choice == "7":
             logout()
             break
         elif choice == "0":
