@@ -18,10 +18,10 @@ def connect():
     try:
         print('Connecting to the PostgreSQL database...')
         conn = psycopg2.connect(host="localhost", 
-                                database="My Database",
-                                user="My Database", 
-                                password="1234",
-                                port=5432
+                                database="postgres",
+                                user="postgres", 
+                                password="postgres",
+                                port=5433
                                 )
         cur = conn.cursor()
         print('PostgreSQL database version:')
