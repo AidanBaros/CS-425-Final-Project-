@@ -1,13 +1,28 @@
+DROP TABLE IF EXISTS booking;
+DROP TABLE IF EXISTS card;
+DROP TABLE IF EXISTS vacationHome;
+DROP TABLE IF EXISTS land;
+DROP TABLE IF EXISTS house;
+DROP TABLE IF EXISTS apartment;
+DROP TABLE IF EXISTS commercialBuilding;
+DROP TABLE IF EXISTS school;
+DROP TABLE IF EXISTS user_x_address;
+DROP TABLE IF EXISTS renter;
+DROP TABLE IF EXISTS agent;
+DROP TABLE IF EXISTS property;
+DROP TABLE IF EXISTS locations;
+DROP TABLE IF EXISTS users;
+
 CREATE TABLE
     users (
-        UserID UUID PRIMARY KEY,
+        UserID VARCHAR(36) PRIMARY KEY,
         Name VARCHAR(100) NOT NULL,
         Email VARCHAR(100) UNIQUE NOT NULL,
         Type VARCHAR(50) NOT NULL
     );
 CREATE TABLE
     locations (
-        LocationID UUID PRIMARY KEY,
+        LocationID VARCHAR(36) PRIMARY KEY,
         Address VARCHAR(255) NOT NULL,
         City VARCHAR(100) NOT NULL,
         State VARCHAR(100) NOT NULL,
@@ -16,9 +31,9 @@ CREATE TABLE
     );
 CREATE TABLE
     property (
-        PropertyID UUID PRIMARY KEY,
+        PropertyID VARCHAR(36) PRIMARY KEY,
         Type VARCHAR(50) NOT NULL,
-        LocationID UUID REFERENCES locations (LocationID),
+        LocationID VARCHAR(36) REFERENCES locations (LocationID),
         Description TEXT NOT NULL,
         Price DECIMAL(10, 2) NOT NULL,
         Availability VARCHAR(50) NOT NULL,
@@ -27,27 +42,27 @@ CREATE TABLE
 
 CREATE TABLE
     vacationHome (
-        VacationHomeID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID)
+        VacationHomeID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID)
     );
 CREATE TABLE
     user_x_address (
-        UserAddressID UUID PRIMARY KEY,
-        UserID UUID REFERENCES users (UserID),
-        LocationID UUID REFERENCES locations (LocationID)
+        UserAddressID VARCHAR(36) PRIMARY KEY,
+        UserID VARCHAR(36) REFERENCES users (UserID),
+        LocationID VARCHAR(36) REFERENCES locations (LocationID)
     );
 
 CREATE TABLE
     school (
-        SchoolID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID),
+        SchoolID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID),
         Name VARCHAR(100) NOT NULL,
-        AddressID UUID REFERENCES locations (LocationID)
+        AddressID VARCHAR(36) REFERENCES locations (LocationID)
     );
 CREATE TABLE
     renter (
-        RenterID UUID PRIMARY KEY,
-        UserID UUID REFERENCES users (UserID),
+        RenterID VARCHAR(36) PRIMARY KEY,
+        UserID VARCHAR(36) REFERENCES users (UserID),
         MoveInDate DATE NOT NULL,
         PreferedLocations VARCHAR(100),
         Budget DECIMAL(10, 2) NOT NULL
@@ -56,54 +71,54 @@ CREATE TABLE
 
 CREATE TABLE
     land (
-        LandID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID)
+        LandID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID)
     );
 CREATE TABLE
     house (
-        HouseID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID),
+        HouseID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID),
         NumRooms INT NOT NULL,
         SquareFeet INT NOT NULL
     );
 CREATE TABLE
     commercialBuilding (
-        CommercialBuildingID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID),
+        CommercialBuildingID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID),
         SquareFeet INT NOT NULL,
         BusinessType VARCHAR(100) NOT NULL
     );
 CREATE TABLE
     card (
-        CardID UUID PRIMARY KEY,
-        RenterID UUID REFERENCES renter (RenterID),
-        AddressID UUID REFERENCES locations (LocationID),
+        CardID VARCHAR(36) PRIMARY KEY,
+        RenterID VARCHAR(36) REFERENCES renter (RenterID),
+        AddressID VARCHAR(36) REFERENCES locations (LocationID),
         CardNumber VARCHAR(16) NOT NULL,
         ExpirationDate DATE NOT NULL,
         CVV VARCHAR(4) NOT NULL
     );
 CREATE TABLE
     Agent (
-        AgentID UUID PRIMARY KEY,
-        UserID UUID NOT NULL,
+        AgentID VARCHAR(36) PRIMARY KEY,
+        UserID VARCHAR(36) NOT NULL,
         JobTitle VARCHAR(100),
         Agency VARCHAR(100),
         ContactInfo VARCHAR(255)
     );
 CREATE TABLE
     booking (
-        BookingID UUID PRIMARY KEY,
-        CardID UUID REFERENCES card (CardID),
-        RenterID UUID REFERENCES renter (RenterID),
-        AgentID UUID REFERENCES agent (AgentID),
-        PropertyID UUID NOT NULL,
+        BookingID VARCHAR(36) PRIMARY KEY,
+        CardID VARCHAR(36) REFERENCES card (CardID),
+        RenterID VARCHAR(36) REFERENCES renter (RenterID),
+        AgentID VARCHAR(36) REFERENCES agent (AgentID),
+        PropertyID VARCHAR(36) NOT NULL,
         StartDate DATE NOT NULL,
         EndDate DATE NOT NULL
     );
 CREATE TABLE
     apartment (
-        ApartmentID UUID PRIMARY KEY,
-        PropertyID UUID REFERENCES property (PropertyID),
+        ApartmentID VARCHAR(36) PRIMARY KEY,
+        PropertyID VARCHAR(36) REFERENCES property (PropertyID),
         BuildingType VARCHAR(20) NOT NULL,
         Floor INT NOT NULL,
         NumRooms INT NOT NULL
